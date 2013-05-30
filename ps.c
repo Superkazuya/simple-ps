@@ -4,7 +4,7 @@
 
 #define NUM_DIM 3
 #define NUM_AGENTS 100
-#define MAX_ITER 10000
+#define MAX_ITER 100000
 
 #define RAND(a, b) (((a)-(b))*(2.0*rand()/RAND_MAX-1)+(b))
 #define NORM    ((double)rand()/RAND_MAX)
@@ -20,10 +20,12 @@ typedef struct
   int val_best;
 } agent;
 
-int domain[NUM_DIM][2];
+//int domain[NUM_DIM][2];
 
 static void eval(agent* );
 static void init_agents(agent* );
+static void update_position(agent* );
+static void update_velocity(agent* );
 
 void
 eval(agent* array)
