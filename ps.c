@@ -91,10 +91,9 @@ update(agent* array)
 	+ weight1*(array[i].pos_best[j] - array[i].pos_curr[j])
 	+ weight2*(g_best_pos[j] - array[i].pos_curr[j]);
       array[i].pos_curr[j] += array[i].velocity[j];
+      //check domain
       if(abs(array[i].velocity[j]) >= BIGNUMBER || abs(array[i].pos_curr[j]) >= BIGNUMBER)
-      {
 	init_one(array+i);
-      }
     }
   }
   inherit_weight *= 0.9999;
