@@ -3,14 +3,14 @@
 #include <string.h>
 
 #define NUM_DIM 3
-#define NUM_AGENTS 100
-#define MAX_ITER 100000
+#define NUM_AGENTS 20
+#define MAX_ITER 1000
+#define BIGNUMBER 65535
 
 #define RAND(a, b) (((a)-(b))*(2.0*rand()/RAND_MAX-1)+(b))
-#define NORM    ((double)rand()/RAND_MAX)
 
 int g_best_pos[NUM_DIM];
-int g_best_val = -1<<31;
+int g_best_val = 1<<30;
 
 typedef struct
 {
@@ -24,25 +24,26 @@ typedef struct
 
 static void eval(agent* );
 static void init_agents(agent* );
-static void update_position(agent* );
-static void update_velocity(agent* );
+static void init_one(agent* p);
+static void update(agent* );
 
 void
 eval(agent* array)
 {
-  unsigned int i, j, val;
+  unsigned int i, j;
+  int val;
   agent* p;
   for(i = 0; i < NUM_AGENTS; i++)
   {
     val = 0;
     p = array+i;
     for(j = 0; j < NUM_DIM; j++)
-      val -= (p->pos_curr[j]-50)*(p->pos_curr[j]-50);
-    if(val > p->val_best)
+      val += abs(p->pos_curr[j]-50);
+    if(val < p->val_best)
     {
       p->val_best = val;
       memcpy(p->pos_best, p->pos_curr, sizeof(p->pos_best));
-      if(val > g_best_val)
+      if(val < g_best_val)
       {
 	g_best_val = val;
 	memcpy(g_best_pos, p->pos_curr, sizeof(g_best_pos));
@@ -52,24 +53,31 @@ eval(agent* array)
 }
 
 void
-init_agents(agent* array)
+init_one(agent* p)
 {
-  unsigned i, j;
-  for(i = 0; i < NUM_AGENTS; i++)
+  unsigned j;
+  for(j = 0; j < NUM_DIM; j++)
   {
-    array[i].val_best = 0;
-    for(j = 0; j < NUM_DIM; j++)
-    {
-      array[i].pos_curr[j] = RAND(100, 0);
-      array[i].velocity[j] = RAND(10, 0);
-    }
+    p->pos_curr[j] = RAND(100, 0);
+    p->velocity[j] = RAND(10, 0);
   }
 }
 
 void
-update_velocity(agent* array)
+init_agents(agent* array)
 {
-  unsigned i, j;
+  unsigned int i, j;
+  for(i = 0; i < NUM_AGENTS; i++)
+  {
+    array[i].val_best = g_best_val;
+    init_one(array+i);
+  }
+}
+
+void
+update(agent* array)
+{
+  unsigned int i, j;
   static float inherit_weight = 1;
   float weight1;
   float weight2;
@@ -78,20 +86,18 @@ update_velocity(agent* array)
     weight1 = RAND(2, 0);
     weight2 = RAND(2, 0);
     for(j = 0; j < NUM_DIM; j++)
+    {
       array[i].velocity[j] = inherit_weight*array[i].velocity[j] 
 	+ weight1*(array[i].pos_best[j] - array[i].pos_curr[j])
 	+ weight2*(g_best_pos[j] - array[i].pos_curr[j]);
-  }
-  inherit_weight *= 0.99;
-}
-
-void
-update_position(agent* array)
-{
-  unsigned i, j;
-  for(i = 0; i < NUM_AGENTS; i++)
-    for(j = 0; j < NUM_DIM; j++)
       array[i].pos_curr[j] += array[i].velocity[j];
+      if(abs(array[i].velocity[j]) >= BIGNUMBER || abs(array[i].pos_curr[j]) >= BIGNUMBER)
+      {
+	init_one(array+i);
+      }
+    }
+  }
+  inherit_weight *= 0.9999;
 }
 
 int
@@ -99,13 +105,12 @@ main()
 {
   agent agents[NUM_AGENTS];
   unsigned int i, counter = 0;
-  while(counter++ < MAX_ITER && g_best_val != 0)
+  init_agents(agents);
+  while(counter++ < MAX_ITER && g_best_val >= 0.001)
   {
-    init_agents(agents);
     eval(agents);
-    update_velocity(agents);
-    update_position(agents);
-    printf("@iteration %d, global best position: (", counter);
+    update(agents);
+    printf("@iteration %d, global best@: (", counter);
     for(i = 0; i < NUM_DIM; i++)
       printf("%d ", g_best_pos[i]);
     printf("), global best: %d\n", g_best_val);
